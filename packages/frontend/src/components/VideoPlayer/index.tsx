@@ -147,7 +147,7 @@ function App() {
         player.currentTime = currentTime;
         player.src = src;
       }
-      if (Math.abs(currentTime - player.currentTime) > 5) {
+      if (Math.abs(currentTime - player.currentTime) > 1) {
         eventbus.emit("info", `jump to ${currentTime.toFixed(2)}s`);
         player.currentTime = currentTime;
       }
