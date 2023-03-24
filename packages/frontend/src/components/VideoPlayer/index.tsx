@@ -6,7 +6,6 @@ import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import eventbus from "../EventBus";
 
-
 interface scope {
   ws?: WebSocket | null;
   state?: "leader" | "follower";
@@ -27,7 +26,7 @@ interface PlayStatus {
 }
 
 const obj: scope = {
-  state: 'follower'
+  state: "follower",
 };
 
 function App() {
@@ -54,56 +53,63 @@ function App() {
   });
 
   const connect = async () => {
-    const target = document.getElementById("roomid");
-    let roomid: string;
-    if (target instanceof HTMLInputElement) {
+    const roomidInput = document.getElementById("roomid");
+    const wsUrlInput = document.getElementById("wsUrl");
+    let roomid: string = "";
+    let wsUrl: string = "";
+    if (roomidInput instanceof HTMLInputElement) {
       // fetch('')
-      roomid = target.value;
+      roomid = roomidInput.value;
     }
-    const ws = new WebSocket("ws://localhost:8080");
+    if (wsUrlInput instanceof HTMLInputElement) {
+      // fetch('')
+      wsUrl = wsUrlInput.value;
+    }
+    const ws = new WebSocket(wsUrl);
     obj.ws = ws;
+    ws.onerror = () => {
+      eventbus.emit("error", `unable connect to ${ws.url}, please check your Internet connection`);
+    };
     ws.onopen = (e: Event) => {
       setConnectionState(true);
-      eventbus.emit('success', 'successfully connect to ws://localhost:8080')
+      eventbus.emit("success", "successfully connect to ws://localhost:8080");
       ws.send(
         JSON.stringify({
           event: "connect",
           data: roomid,
         })
       );
-    };
-
-    ws.onmessage = (e) => {
-      const data: ConnectionType = JSON.parse(e.data);
-      const { type, state, playState } = data;
-      // console.log(data);
-      if (type === "connection") {
-        console.log(`this is ${state}`)
-        if (obj.state !== 'leader' && state === "leader") {
-          eventbus.emit('info', 'this is leader')
-          obj.state = state
-          const interval = setInterval(
-            () =>
-              ws.send(
-                JSON.stringify({
-                  event: "sync",
-                  data: {
-                    id: roomid,
-                    data: generatePlayState(),
-                  },
-                })
-              ),
-            5000
-          );
-          obj.interval = interval;
-        } 
-      }
-      if (obj.state === "follower" && type === "sync" && playState) {
-        setPlayState(playState);
-      }
+      ws.onmessage = (e) => {
+        const data: ConnectionType = JSON.parse(e.data);
+        const { type, state, playState } = data;
+        // console.log(data);
+        if (type === "connection") {
+          console.log(`this is ${state}`);
+          if (obj.state !== "leader" && state === "leader") {
+            eventbus.emit("info", "this is leader");
+            obj.state = state;
+            const interval = setInterval(
+              () =>
+                ws.send(
+                  JSON.stringify({
+                    event: "sync",
+                    data: {
+                      id: roomid,
+                      data: generatePlayState(),
+                    },
+                  })
+                ),
+              5000
+            );
+            obj.interval = interval;
+          }
+        }
+        if (obj.state === "follower" && type === "sync" && playState) {
+          setPlayState(playState);
+        }
+      };
     };
   };
-
 
   const generatePlayState = (): PlayStatus => {
     const player = document.getElementById("player");
@@ -132,16 +138,16 @@ function App() {
     if (player instanceof HTMLVideoElement && valid) {
       // console.log(player)
       if (src !== player.currentSrc) {
-        eventbus.emit('info', `switch src to ${src}`)
+        eventbus.emit("info", `switch src to ${src}`);
         player.currentTime = currentTime;
         player.src = src;
       }
       if (Math.abs(currentTime - player.currentTime) > 5) {
-        eventbus.emit('info', `jump to ${currentTime.toFixed(2)}s`)
+        eventbus.emit("info", `jump to ${currentTime.toFixed(2)}s`);
         player.currentTime = currentTime;
       }
       if (player.paused !== isPaused) {
-        eventbus.emit('info', `change play state`)
+        eventbus.emit("info", `change play state`);
         // console.log('test')
         player.paused ? player.play() : player.pause();
       }
@@ -151,18 +157,20 @@ function App() {
   const disconnect = () => {
     const ws = obj.ws;
     if (ws instanceof WebSocket) {
-      console.log(`disconnect from ${ws.url}`)
+      console.log(`disconnect from ${ws.url}`);
       ws.close();
-      ws.onmessage = null
+      ws.onmessage = null;
       if (obj.interval) {
-        clearInterval(obj.interval)
-        obj.interval = 0
+        clearInterval(obj.interval);
+        obj.interval = 0;
       }
-      eventbus.emit('success', 'successfully disconnect from ws://localhost:8080')
+      eventbus.emit(
+        "success",
+        "successfully disconnect from ws://localhost:8080"
+      );
       setConnectionState(false);
     }
-  }
-
+  };
 
   return (
     <div className="container">
@@ -172,19 +180,33 @@ function App() {
         id="filled-basic"
         label="link"
         variant="filled"
-        defaultValue={"http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"}
+        defaultValue={
+          "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
+        }
         onChange={(e) => {
           textChange(e.target.value);
         }}
       />
+
       <div className="buttonFlex">
-        <TextField
-          required
-          id="roomid"
-          label="Play Room ID"
-          defaultValue="1234abcd"
-        />
-        <Button variant="outlined" onClick={connectionState ? disconnect : connect}>
+        <div>
+          <TextField
+            required
+            id="roomid"
+            label="Play Room ID"
+            defaultValue="1234abcd"
+          />
+          <TextField
+            required
+            id="wsUrl"
+            label="Websocket Url"
+            defaultValue="ws://us.wadwings.com:8080"
+          />
+        </div>
+        <Button
+          variant="outlined"
+          onClick={connectionState ? disconnect : connect}
+        >
           {connectionState ? "Disconnect" : "Connect"}
         </Button>
       </div>
