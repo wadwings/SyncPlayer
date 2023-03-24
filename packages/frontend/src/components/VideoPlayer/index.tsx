@@ -23,6 +23,7 @@ interface PlayStatus {
   isPaused: boolean;
   currentTime: number;
   src: string;
+  ts: number;
 }
 
 const obj: scope = {
@@ -121,6 +122,7 @@ function App() {
         isPaused: paused,
         currentTime: currentTime,
         src: currentSrc,
+        ts: Date.now(),
       };
     }
     return {
@@ -128,13 +130,16 @@ function App() {
       isPaused: false,
       currentTime: 0,
       src: "",
+      ts: 0,
     };
   };
 
   const setPlayState = (state: PlayStatus) => {
     // console.log(`receiving setting ${state}`);
     const player = document.getElementById("player");
-    const { valid, isPaused, currentTime, src } = state;
+    let { valid, isPaused, currentTime, src, ts } = state;
+    const now = Date.now()
+    currentTime += (now - ts) / 1000;
     if (player instanceof HTMLVideoElement && valid) {
       // console.log(player)
       if (src !== player.currentSrc) {
