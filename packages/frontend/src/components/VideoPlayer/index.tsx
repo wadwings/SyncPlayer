@@ -72,7 +72,7 @@ function App() {
     };
     ws.onopen = (e: Event) => {
       setConnectionState(true);
-      eventbus.emit("success", "successfully connect to ws://localhost:8080");
+      eventbus.emit("success", `successfully connect to ${ws.url}`);
       ws.send(
         JSON.stringify({
           event: "connect",
@@ -166,7 +166,7 @@ function App() {
       }
       eventbus.emit(
         "success",
-        "successfully disconnect from ws://localhost:8080"
+        `successfully disconnect from ${ws.url}`
       );
       setConnectionState(false);
     }
@@ -200,7 +200,7 @@ function App() {
             required
             id="wsUrl"
             label="Websocket Url"
-            defaultValue="ws://us.wadwings.com:8080"
+            defaultValue="wss://us.wadwings.com/websocket/"
           />
         </div>
         <Button
