@@ -1,0 +1,41 @@
+name: CI/CD
+# 触发条件为 push
+on:
+  push:
+    branches:
+      - main
+    # 修改文件范围, 不在范围内不触发
+    paths:
+      - '.github/workflows/**'
+      - 'packages/backend/**'
+# 任务
+jobs:
+  test:
+    # 运行的环境
+    runs-on: ubuntu-latest
+    # 步骤
+    steps:
+      - uses: actions/checkout@v2 # git pull
+      
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16
+      - name: 打包镜像, 上传 Docker Hub
+        run: |
+          cd ./packages/backend
+          docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
+          docker build --platform linux/amd64 -t syncplaybackend:latest  .
+          docker tag syncplaybackend:latest ${{ secrets.DOCKER_REPOSITORY }}
+          docker push ${{ secrets.DOCKER_REPOSITORY }}
+
+      - name: 登录服务器, 执行脚本
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: wings
+          port: 32422
+          key: ${{ secrets.REMOTE_KEY }}
+          # 执行脚本
+          script: |
+            echo ${{ secrets.REMOTE_PASS }} | sudo -S bash ./deploy.sh
